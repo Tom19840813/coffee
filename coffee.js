@@ -1,0 +1,83 @@
+/* Coffee Directory Project (Next.js)
+   Dynamic pages generated from local CSV file (coffee.csv)
+   SSR enabled for live data rendering
+*/
+
+// pages/index.js
+import fs from 'fs'
+import path from 'path'
+import { parse } from 'csv-parse/sync'
+import Link from 'next/link'
+
+export async function getStaticProps() {
+  const filePath = path.join(process.cwd(), 'data', 'coffee.csv')
+  const fileContent = fs.readFileSync(filePath)
+  const records = parse(fileContent, {
+    columns: true,
+    skip_empty_lines: true
+  })
+  return { props: { coffeeShops: records } }
+}
+
+export default function Home({ coffeeShops }) {
+  return (
+    <div style={{ padding: '2rem' }}>
+      <h1>Coffee Directory</h1>
+      <ul>
+        {coffeeShops.map((shop, index) => (
+          <li key={index}>
+            <Link href={`/coffee/${shop.name.toLowerCase().replace(/\s+/g, '-')}`}>{shop.name}</Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+// pages/coffee/[slug].js
+import fs from 'fs'
+import path from 'path'
+import { parse } from 'csv-parse/sync'
+
+export async function getStaticPaths() {
+  const filePath = path.join(process.cwd(), 'data', 'coffee.csv')
+  const fileContent = fs.readFileSync(filePath)
+  const records = parse(fileContent, {
+    columns: true,
+    skip_empty_lines: true
+  })
+  const paths = records.map(shop => ({
+    params: { slug: shop.name.toLowerCase().replace(/\s+/g, '-') }
+  }))
+  return { paths, fallback: false }
+}
+
+export async function getStaticProps({ params }) {
+  const filePath = path.join(process.cwd(), 'data', 'coffee.csv')
+  const fileContent = fs.readFileSync(filePath)
+  const records = parse(fileContent, {
+    columns: true,
+    skip_empty_lines: true
+  })
+  const entry = records.find(shop => shop.name.toLowerCase().replace(/\s+/g, '-') === params.slug)
+  return { props: { entry } }
+}
+
+export default function CoffeePage({ entry }) {
+  return (
+    <div style={{ padding: '2rem' }}>
+      <h1>{entry.name}</h1>
+      <p>{entry.description}</p>
+      <p><strong>Address:</strong> {entry.address}</p>
+      <p><strong>Phone:</strong> {entry.phone}</p>
+      <a href={entry.website} target="_blank">Visit Website</a>
+    </div>
+  )
+}
+
+/* data/coffee.csv
+name,address,phone,website,rating,description
+Cafe Aroma,123 Brew St, +1234567890,https://cafearoma.com,4.6,"Chill vibes & amazing espresso."
+Roast House,456 Bean Ave, +1234567891,https://roasthouse.com,4.4,"Industrial style with local beans."
+The Daily Drip,789 Roast Ln, +1234567892,https://thedailydrip.com,4.8,"A modern spot for real coffee nerds."
+*/
